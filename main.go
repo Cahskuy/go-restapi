@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/Cahskuy/go-crud/controllers"
 	"github.com/Cahskuy/go-crud/initializers"
+	"github.com/Cahskuy/go-crud/routes"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,13 +12,9 @@ func init() {
 }
 
 func main() {
-	r := gin.Default()
+	app := gin.Default()
 
-	r.POST("/posts", controllers.PostsCreate)
-	r.PUT("/posts/:id", controllers.PostsUpdate)
-	r.GET("/posts", controllers.PostsIndex)
-	r.GET("/posts/:id", controllers.PostsShow)
-	r.DELETE("/posts/:id", controllers.PostsDelete)
+	routes.InitRoute(app)
 
-	r.Run()
+	app.Run()
 }
