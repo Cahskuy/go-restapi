@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"github.com/Cahskuy/go-crud/controllers"
+	"github.com/Cahskuy/go-restapi/controllers"
 	"github.com/gin-gonic/gin"
 )
 

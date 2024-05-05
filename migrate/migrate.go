@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/Cahskuy/go-crud/initializers"
-	"github.com/Cahskuy/go-crud/models"
+	"github.com/Cahskuy/go-restapi/initializers"
+	"github.com/Cahskuy/go-restapi/models"
 )
 
 func init() {
@@ -10,6 +10,6 @@ func init() {
 	initializers.ConnectToDB()
 }
 
-func main()  {
+func main() {
 	initializers.DB.AutoMigrate(&models.Post{})
 }
