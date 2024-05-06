@@ -1,27 +1,20 @@
 package middlewares
 
 import (
-	"net/http"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/rs/cors"
 )
 
-func CorsHandler(ctx *cors.Cors) gin.HandlerFunc {
-	// Return a Gin middleware function
-	return func(ctx *gin.Context) {
-		// Handle CORS for the request using the CORS middleware
-		ctx.Writer.Header().Add("Access-Control-Allow-Origin", "*")
-		ctx.Writer.Header().Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
-		ctx.Writer.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		// Check for preflight request
-		if ctx.Request.Method == "OPTIONS" {
-			ctx.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		// Continue processing the request
-		ctx.Next()
+func CorsHandler() gin.HandlerFunc {
+	config := cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}
+
+	return cors.New(config)
 }
