@@ -11,23 +11,30 @@ import (
 )
 
 func PostsCreate(ctx *gin.Context) {
-	fmt.Println(ctx.Request.Body)
-	var req struct {
-		Title string
-		Body  string
-	}
+	fmt.Println("========SAMPE SINI 3========")
+	fmt.Println(ctx.Writer.Written())
 
-	ctx.Bind(&req)
-	post := models.Post{Title: req.Title, Body: req.Body}
+	// var req schemas.Post
 
-	err := initializers.DB.Create(&post).Error
-	if err != nil {
-		utils.ErrorResponse(ctx, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// ctx.Bind(&req)
+	// post := models.Post{Title: req.Title, Body: req.Body}
+
+	fmt.Println("========SAMPE SINI 4========")
+	fmt.Println(ctx.Writer.Written())
+
+	// err := initializers.DB.Create(&post).Error
+
+	fmt.Println("========SAMPE SINI 5========")
+	fmt.Println(ctx.Writer.Written())
+
+	// if err != nil {
+	// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	ctx.Abort()
+	// 	return
+	// }
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"message": post,
+		"message": "success",
 	})
 }
 
