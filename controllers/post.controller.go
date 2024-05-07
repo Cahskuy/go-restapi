@@ -1,35 +1,25 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Cahskuy/go-restapi/initializers"
 	"github.com/Cahskuy/go-restapi/models"
+	"github.com/Cahskuy/go-restapi/schemas"
 	"github.com/Cahskuy/go-restapi/utils"
 	"github.com/gin-gonic/gin"
 )
 
 func PostsCreate(ctx *gin.Context) {
-	fmt.Println("========SAMPE SINI 3========")
-	fmt.Println(ctx.Writer.Written())
+	post := ctx.MustGet("payload").(*schemas.Post)
 
-	// var req schemas.Post
-
-	// ctx.Bind(&req)
-	// post := models.Post{Title: req.Title, Body: req.Body}
-
-	fmt.Println("========SAMPE SINI 4========")
-	fmt.Println(ctx.Writer.Written())
+	println("INI TITLE", post.Title)
+	println("INI BODY", post.Body)
 
 	// err := initializers.DB.Create(&post).Error
 
-	fmt.Println("========SAMPE SINI 5========")
-	fmt.Println(ctx.Writer.Written())
-
 	// if err != nil {
-	// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-	// 	ctx.Abort()
+	// 	utils.ErrorResponse(ctx, http.StatusInternalServerError, err.Error())
 	// 	return
 	// }
 

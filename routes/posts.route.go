@@ -9,10 +9,10 @@ import (
 
 func Posts(g *gin.RouterGroup) {
 	// Initialize custom validator
-	validator := middlewares.NewCustomValidator()
+	validator := middlewares.NewValidator()
 
 	g.POST("/", middlewares.ValidationHandler(validator, schemas.Post{}), controllers.PostsCreate)
-	g.PUT("/:id", middlewares.ValidationHandler(validator, schemas.Post{}), controllers.PostsUpdate)
+	g.PUT("/:id", controllers.PostsUpdate)
 	g.GET("/", controllers.PostsIndex)
 	g.GET("/:id", controllers.PostsShow)
 	g.DELETE("/:id", controllers.PostsDelete)
