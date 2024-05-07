@@ -2,12 +2,17 @@ package routes
 
 import (
 	"github.com/Cahskuy/go-restapi/controllers"
+	"github.com/Cahskuy/go-restapi/middlewares"
+	"github.com/Cahskuy/go-restapi/schemas"
 	"github.com/gin-gonic/gin"
 )
 
 func Posts(g *gin.RouterGroup) {
-	g.POST("/", controllers.PostsCreate)
-	g.PUT("/:id", controllers.PostsUpdate)
+	// Initialize custom validator
+	validator := middlewares.NewCustomValidator()
+
+	g.POST("/", middlewares.ValidationHandler(validator, schemas.Post{}), controllers.PostsCreate)
+	g.PUT("/:id", middlewares.ValidationHandler(validator, schemas.Post{}), controllers.PostsUpdate)
 	g.GET("/", controllers.PostsIndex)
 	g.GET("/:id", controllers.PostsShow)
 	g.DELETE("/:id", controllers.PostsDelete)
