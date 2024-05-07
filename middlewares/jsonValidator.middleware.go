@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -24,12 +23,12 @@ func NewValidator() *Validator {
 }
 
 // ValidateJSON validates the JSON request body using the validator
-func (cv *Validator) ValidateJSON(c *gin.Context, req interface{}) error {
-	if err := c.ShouldBindJSON(req); err != nil {
+func (v *Validator) validateJSON(ctx *gin.Context, req interface{}) error {
+	if err := ctx.ShouldBindJSON(req); err != nil {
 		return err
 	}
 
-	if err := cv.validator.Struct(req); err != nil {
+	if err := v.validator.Struct(req); err != nil {
 		return err
 	}
 
@@ -47,11 +46,17 @@ func ValidationHandler(validator *Validator, schema interface{}) gin.HandlerFunc
 		trans, _ := uni.GetTranslator("en")
 		en_translations.RegisterDefaultTranslations(validator.validator, trans)
 
-		err := validator.ValidateJSON(ctx, payload.Interface())
+		err := validator.validateJSON(ctx, payload.Interface())
 		if err != nil {
-			errMsg := translateError(err, trans)
-			fmt.Println(errMsg)
-			utils.ErrorResponse(ctx, http.StatusBadRequest, err.Error())
+			errMsgs := translateError(err, trans)
+			if len(errMsgs) > 0 {
+				// access the first error message
+				firstErrMsg := errMsgs[0]
+				utils.ErrorResponse(ctx, http.StatusBadRequest, firstErrMsg)
+				return
+			}
+
+			utils.ErrorResponse(ctx, http.StatusBadRequest, "Error translating validation errors")
 			return
 		}
 
@@ -60,14 +65,15 @@ func ValidationHandler(validator *Validator, schema interface{}) gin.HandlerFunc
 	}
 }
 
-func translateError(err error, trans ut.Translator) (errs []error) {
+func translateError(err error, trans ut.Translator) []string {
 	if err == nil {
 		return nil
 	}
 	validatorErrs := err.(validator.ValidationErrors)
+	var errMsgs []string
 	for _, e := range validatorErrs {
-		translatedErr := fmt.Errorf(e.Translate(trans))
-		errs = append(errs, translatedErr)
+		translatedErr := e.Translate(trans)
+		errMsgs = append(errMsgs, translatedErr)
 	}
-	return errs
+	return errMsgs
 }
