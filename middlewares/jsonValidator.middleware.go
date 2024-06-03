@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Cahskuy/go-restapi/models"
 	"github.com/Cahskuy/go-restapi/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -51,51 +49,34 @@ func (iv *InputValidation) ValidationHandler(schema interface{}) gin.HandlerFunc
 	}
 }
 
-// Method Validate() adalah logic dari validasi input yang akan kita buat
-// Selain itu, kita dapat membuat logic validasi input secara kustom
 func validate(iv *InputValidation, data interface{}) error {
-	// Buat sebuah slice dari struct untuk menampung error input
-	// Error dalam input bisa hanya satu atau lebih dari satu
-	var errFields []models.ErrorInputResponse
-
-	// Menambah kriteria validasi baru agar dapat memvalidasi nomor telepon
+	// Add new validation criteria for phone numbers
 	iv.Validator.RegisterValidation("phone", phoneValidation)
-	// Kita akan memanggil method Struct() dari package golang validator untuk memvalidasi input yang diterima
+	// Call the Struct() method from the golang validator package to validate the received input
 	err := iv.Validator.Struct(data)
-	// Jika input yang diterima tidak sesuai dengan kriteria, maka akan menghasilkan error.
-	// Kita dapat membuat pesan error secara custom berdasarkan kriteria yang sudah diberikan
+	// If the input received does not match the criteria, it will produce an error.
 	if err != nil {
-		log.Println(err)
-		for _, err := range err.(validator.ValidationErrors) {
-			var errField models.ErrorInputResponse
-			switch err.Tag() {
-			case "email":
-				errField.FieldName = strings.ToLower(err.Field())
-				errField.Message = "Email format is invalid"
-			case "min":
-				errField.FieldName = strings.ToLower(err.Field())
-				errField.Message = strings.ToLower(err.Field()) + " must be minimum " + err.Param() + " characters"
-			case "max":
-				errField.FieldName = strings.ToLower(err.Field())
-				errField.Message = strings.ToLower(err.Field()) + " maximum allowed is" + err.Param() + " characters"
-			case "required":
-				errField.FieldName = strings.ToLower(err.Field())
-				errField.Message = strings.ToLower(err.Field()) + " is required"
-			case "phone":
-				errField.FieldName = strings.ToLower(err.Field())
-				errField.Message = "Phone number format is invalid"
-			}
-			errFields = append(errFields, errField)
+		// Take the first error from the validation error
+		validationErr := err.(validator.ValidationErrors)[0]
+		var errMsg string
+		switch validationErr.Tag() {
+		case "email":
+			errMsg = "Email format is invalid"
+		case "min":
+			errMsg = strings.ToLower(validationErr.Field()) + " must be minimum " + validationErr.Param() + " characters"
+		case "max":
+			errMsg = strings.ToLower(validationErr.Field()) + " maximum allowed is " + validationErr.Param() + " characters"
+		case "required":
+			errMsg = strings.ToLower(validationErr.Field()) + " is required"
+		case "phone":
+			errMsg = "Phone number format is invalid"
+		default:
+			errMsg = "Invalid input for " + strings.ToLower(validationErr.Field())
 		}
+		return errors.New(errMsg)
 	}
-	// Kalau tidak ada error, kita bisa mengembalikan nilainya menjadi nil
-	if len(errFields) == 0 {
-		return nil
-	}
-	// Jadikan slice dari errFields menjadi JSON Array of Objects
-	// Hasilnya bisa digunakan oleh Frontend Developer untuk membuat pesan error input.
-	marshaledErr, _ := json.Marshal(errFields)
-	return errors.New(string(marshaledErr))
+
+	return nil
 }
 
 func phoneValidation(fl validator.FieldLevel) bool {
