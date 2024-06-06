@@ -7,13 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Posts(g *gin.RouterGroup) {
-	// Initialize custom validator
-	validator := middlewares.NewInputValidation()
+func PostsRoutes(router *gin.RouterGroup) {
+	postsRoutes := router.Group("/posts")
+	{
+		postsRoutes.POST("/", middlewares.ValidationHandler(schemas.Post{}), controllers.PostsCreate)
+		postsRoutes.PUT("/:id", controllers.PostsUpdate)
+		postsRoutes.GET("/", controllers.PostsIndex)
+		postsRoutes.GET("/:id", controllers.PostsShow)
+		postsRoutes.DELETE("/:id", controllers.PostsDelete)
+	}
 
-	g.POST("/", validator.ValidationHandler(schemas.Post{}), controllers.PostsCreate)
-	g.PUT("/:id", controllers.PostsUpdate)
-	g.GET("/", controllers.PostsIndex)
-	g.GET("/:id", controllers.PostsShow)
-	g.DELETE("/:id", controllers.PostsDelete)
 }

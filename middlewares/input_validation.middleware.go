@@ -13,18 +13,14 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// InputValidation holds the validator v10 instance
-type InputValidation struct {
-	Validator *validator.Validate
-}
+var inputValidation *validator.Validate
 
-// NewInputValidation returns a new instance of Validator
-func NewInputValidation() *InputValidation {
-	return &InputValidation{Validator: validator.New()}
+func init() {
+	inputValidation = validator.New()
 }
 
 // ValidationHandler is a middleware that validates JSON requests
-func (iv *InputValidation) ValidationHandler(schema interface{}) gin.HandlerFunc {
+func ValidationHandler(schema interface{}) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		// Create a pointer to the schema struct
 		payload := reflect.New(reflect.TypeOf(schema)).Interface()
@@ -37,7 +33,7 @@ func (iv *InputValidation) ValidationHandler(schema interface{}) gin.HandlerFunc
 		}
 
 		// Validate the bound struct
-		if err := validate(iv, payload); err != nil {
+		if err := validate(payload); err != nil {
 			log.Println("Validation error:", err.Error())
 			utils.ErrorResponse(ctx, http.StatusBadRequest, err.Error())
 			return
@@ -49,11 +45,11 @@ func (iv *InputValidation) ValidationHandler(schema interface{}) gin.HandlerFunc
 	}
 }
 
-func validate(iv *InputValidation, data interface{}) error {
+func validate(data interface{}) error {
 	// Add new validation criteria for phone numbers
-	iv.Validator.RegisterValidation("phone", phoneValidation)
+	inputValidation.RegisterValidation("phone", phoneValidation)
 	// Call the Struct() method from the golang validator package to validate the received input
-	err := iv.Validator.Struct(data)
+	err := inputValidation.Struct(data)
 	// If the input received does not match the criteria, it will produce an error.
 	if err != nil {
 		// Take the first error from the validation error

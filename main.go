@@ -28,7 +28,7 @@ func main() {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Hello, world!"})
 	})
 
-	routes.InitRoute(app)
+	routes.SetupRoutes(app)
 
 	app.Run()
 }
