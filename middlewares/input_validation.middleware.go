@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -17,6 +18,7 @@ var inputValidation *validator.Validate
 
 func init() {
 	inputValidation = validator.New()
+	inputValidation.RegisterValidation("phone", phoneValidation)
 }
 
 // ValidationHandler is a middleware that validates JSON requests
@@ -26,9 +28,9 @@ func ValidationHandler(schema interface{}) gin.HandlerFunc {
 		payload := reflect.New(reflect.TypeOf(schema)).Interface()
 
 		// Bind JSON payload to the schema
-		if err := ctx.ShouldBindJSON(payload); err != nil {
+		if err := BindJSONCaseSensitive(ctx, payload); err != nil {
 			log.Println("Failed to bind JSON:", err)
-			utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid request payload")
+			utils.ErrorResponse(ctx, http.StatusBadRequest, err.Error())
 			return
 		}
 
@@ -46,13 +48,8 @@ func ValidationHandler(schema interface{}) gin.HandlerFunc {
 }
 
 func validate(data interface{}) error {
-	// Add new validation criteria for phone numbers
-	inputValidation.RegisterValidation("phone", phoneValidation)
-	// Call the Struct() method from the golang validator package to validate the received input
 	err := inputValidation.Struct(data)
-	// If the input received does not match the criteria, it will produce an error.
 	if err != nil {
-		// Take the first error from the validation error
 		validationErr := err.(validator.ValidationErrors)[0]
 		var errMsg string
 		switch validationErr.Tag() {
@@ -71,7 +68,6 @@ func validate(data interface{}) error {
 		}
 		return errors.New(errMsg)
 	}
-
 	return nil
 }
 
@@ -80,6 +76,46 @@ func phoneValidation(fl validator.FieldLevel) bool {
 	if len(phoneNumber) < 10 || len(phoneNumber) > 13 {
 		return false
 	}
-	phoneRegex, _ := regexp.Compile(`^(0|\\+62|062|62)[0-9]+$`)
+	phoneRegex := regexp.MustCompile(`^(0|\\+62|062|62)[0-9]+$`)
 	return phoneRegex.MatchString(phoneNumber)
+}
+
+func BindJSONCaseSensitive(c *gin.Context, obj interface{}) error {
+	// Ensure obj is a pointer to a struct
+	objType := reflect.TypeOf(obj)
+	if objType.Kind() != reflect.Ptr || objType.Elem().Kind() != reflect.Struct {
+		return errors.New("obj must be a pointer to a struct")
+	}
+
+	// Get JSON data from request
+	raw := make(map[string]json.RawMessage)
+	if err := c.ShouldBindJSON(&raw); err != nil {
+		return err
+	}
+
+	// Get the type of the struct
+	typ := objType.Elem()
+
+	// Create a new instance of the struct
+	value := reflect.New(typ).Elem()
+
+	// Iterate over JSON keys and set struct fields
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "" {
+			continue
+		}
+		jsonName := jsonTag
+		if rawValue, ok := raw[jsonName]; ok {
+			if err := json.Unmarshal(rawValue, value.Field(i).Addr().Interface()); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Set the struct instance to the object
+	reflect.ValueOf(obj).Elem().Set(value)
+
+	return nil
 }
