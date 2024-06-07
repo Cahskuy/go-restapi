@@ -3,6 +3,7 @@ package middlewares
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
@@ -28,9 +29,16 @@ func ValidationHandler(schema interface{}) gin.HandlerFunc {
 		payload := reflect.New(reflect.TypeOf(schema)).Interface()
 
 		// Bind JSON payload to the schema
-		if err := BindJSONCaseSensitive(ctx, payload); err != nil {
+		if err := ctx.ShouldBindJSON(payload); err != nil {
 			log.Println("Failed to bind JSON:", err)
-			utils.ErrorResponse(ctx, http.StatusBadRequest, err.Error())
+			if _, ok := err.(*json.UnmarshalTypeError); ok {
+				// Extract the field name and type from the error
+				errorMessage := fmt.Sprintf("Field '%s' should be of type '%s'", err.(*json.UnmarshalTypeError).Field, err.(*json.UnmarshalTypeError).Type)
+				utils.ErrorResponse(ctx, http.StatusBadRequest, errorMessage)
+				return
+			}
+
+			utils.ErrorResponse(ctx, http.StatusBadRequest, "Error decoding JSON")
 			return
 		}
 
@@ -41,6 +49,7 @@ func ValidationHandler(schema interface{}) gin.HandlerFunc {
 			return
 		}
 
+		log.Println(payload)
 		// Set the payload to the context
 		ctx.Set("payload", payload)
 		ctx.Next()
@@ -53,14 +62,22 @@ func validate(data interface{}) error {
 		validationErr := err.(validator.ValidationErrors)[0]
 		var errMsg string
 		switch validationErr.Tag() {
-		case "email":
-			errMsg = "Email format is invalid"
-		case "min":
-			errMsg = strings.ToLower(validationErr.Field()) + " must be minimum " + validationErr.Param() + " characters"
-		case "max":
-			errMsg = strings.ToLower(validationErr.Field()) + " maximum allowed is " + validationErr.Param() + " characters"
 		case "required":
 			errMsg = strings.ToLower(validationErr.Field()) + " is required"
+		case "min":
+			switch validationErr.Type().String() {
+			case "string":
+				errMsg = strings.ToLower(validationErr.Field()) + " must be minimum " + validationErr.Param() + " characters"
+			case "*int":
+			case "int":
+				errMsg = strings.ToLower(validationErr.Field()) + " must be >= " + validationErr.Param()
+			default:
+				errMsg = strings.ToLower(validationErr.Field()) + " must be minimum " + validationErr.Param()
+			}
+		case "max":
+			errMsg = strings.ToLower(validationErr.Field()) + " maximum allowed is " + validationErr.Param() + " characters"
+		case "email":
+			errMsg = "Email format is invalid"
 		case "phone":
 			errMsg = "Phone number format is invalid"
 		default:
@@ -83,9 +100,6 @@ func phoneValidation(fl validator.FieldLevel) bool {
 func BindJSONCaseSensitive(c *gin.Context, obj interface{}) error {
 	// Ensure obj is a pointer to a struct
 	objType := reflect.TypeOf(obj)
-	if objType.Kind() != reflect.Ptr || objType.Elem().Kind() != reflect.Struct {
-		return errors.New("obj must be a pointer to a struct")
-	}
 
 	// Get JSON data from request
 	raw := make(map[string]json.RawMessage)
@@ -102,6 +116,7 @@ func BindJSONCaseSensitive(c *gin.Context, obj interface{}) error {
 	// Iterate over JSON keys and set struct fields
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)
+		fieldType := strings.ReplaceAll(field.Type.String(), "*", "")
 		jsonTag := field.Tag.Get("json")
 		if jsonTag == "" {
 			continue
@@ -109,7 +124,7 @@ func BindJSONCaseSensitive(c *gin.Context, obj interface{}) error {
 		jsonName := jsonTag
 		if rawValue, ok := raw[jsonName]; ok {
 			if err := json.Unmarshal(rawValue, value.Field(i).Addr().Interface()); err != nil {
-				return err
+				return errors.New(jsonTag + " must be " + fieldType)
 			}
 		}
 	}

@@ -14,7 +14,7 @@ func PostsCreate(ctx *gin.Context) {
 	post := ctx.MustGet("payload").(*schemas.Post)
 
 	println("INI TITLE", post.Title)
-	println("INI BODY", post.Body)
+	println("INI BODY", *(*post).Body)
 
 	// err := initializers.DB.Create(&post).Error
 
@@ -25,6 +25,7 @@ func PostsCreate(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message": "success",
+		"data": post,
 	})
 }
 
